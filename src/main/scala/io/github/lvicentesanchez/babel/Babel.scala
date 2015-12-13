@@ -2,12 +2,14 @@ package io.github.lvicentesanchez.babel
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import io.github.lvicentesanchez.babel.data.UserID
+import io.github.lvicentesanchez.babel.data.ProjectID
 import io.github.lvicentesanchez.babel.sharding.cluster.Cluster
 import io.github.lvicentesanchez.babel.sharding.regions.key.Key
 import io.github.lvicentesanchez.babel.sharding.regions.project.Project
 import io.github.lvicentesanchez.babel.sharding.regions.translation.Translation
-import io.github.lvicentesanchez.data.Content
+
+import scala.concurrent.{ Future, blocking }
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Babel extends App {
   val port = "2551"
@@ -20,8 +22,12 @@ object Babel extends App {
   val translation = sharding.of(Translation.blueprint)
   val key = sharding.of(Key.blueprint(project.api, translation.api))
 
-  project.api.sendMessage(UserID("0"), Content("a"))
-  project.api.sendMessage(UserID("0"), Content("b"))
-  key.api.sendMessage(UserID("1"), Content("c"))
-  translation.api.sendMessage(UserID("2"), Content("d"))
+  for {
+    r0 <- project.api.projectExists(ProjectID("a"))
+    _ = println(s"Project a exists? $r0")
+    r1 <- project.api.createProject(ProjectID("a"))
+    r2 <- Future(blocking(Thread.sleep(15000)))
+    r3 <- project.api.projectExists(ProjectID("a"))
+    _ = println(s"Project a exists? $r3")
+  } yield ()
 }
