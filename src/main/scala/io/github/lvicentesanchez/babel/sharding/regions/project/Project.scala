@@ -1,15 +1,17 @@
 package io.github.lvicentesanchez.babel.sharding.regions.project
 
+import java.net.URLDecoder
+
 import akka.actor._
 import akka.cluster.sharding.ShardRegion
 import akka.cluster.sharding.ShardRegion.ExtractEntityId
-import akka.persistence.{ PersistentActor, SnapshotOffer }
+import akka.persistence.PersistentActor
 import io.github.lvicentesanchez.babel.data.ProjectID
 import io.github.lvicentesanchez.babel.sharding._
 import io.github.lvicentesanchez.babel.sharding.cluster.{ Blueprint, Shard }
-import io.github.lvicentesanchez.babel.sharding.regions.project.Project.Events.ProjectCreated
 
 import scala.concurrent.duration._
+import scala.io.Codec
 
 final class Project private[project] () extends Actor with PersistentActor {
   import Project._
@@ -21,15 +23,12 @@ final class Project private[project] () extends Actor with PersistentActor {
   override def receiveRecover: Receive = {
     case evt: Events.ProjectCreated =>
       projectID = Option(evt.projectID)
-
-    case SnapshotOffer(_, pid: ProjectID) =>
-      projectID = Option(pid)
   }
 
   override def receiveCommand: Receive = {
     case msg: Commands.CreateProject if projectID.isEmpty =>
       persist(Events.ProjectCreated(msg.projectID)) {
-        case ProjectCreated(id) =>
+        case Events.ProjectCreated(id) =>
           projectID = Option(id)
           sender() ! true
       }
@@ -48,7 +47,7 @@ final class Project private[project] () extends Actor with PersistentActor {
       context.stop(self)
   }
 
-  override val persistenceId: String = s"project/${self.path.name}"
+  override val persistenceId: String = URLDecoder.decode(self.path.name, Codec.UTF8.name)
 }
 
 object Project {
