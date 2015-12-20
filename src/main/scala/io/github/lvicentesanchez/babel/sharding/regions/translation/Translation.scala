@@ -4,11 +4,8 @@ import java.net.URLDecoder
 
 import akka.actor._
 import akka.cluster.sharding.ShardRegion
-import akka.cluster.sharding.ShardRegion.ExtractEntityId
 import akka.persistence.PersistentActor
 import io.github.lvicentesanchez.babel.data.{ KeyID, ProjectID }
-import io.github.lvicentesanchez.babel.sharding._
-import io.github.lvicentesanchez.babel.sharding.cluster.{ Blueprint, Shard }
 
 import scala.concurrent.duration._
 import scala.io.Codec
@@ -64,31 +61,11 @@ final class Translation private[translation] () extends Actor with PersistentAct
 }
 
 object Translation {
-  val blueprint: Blueprint[TranslationAPI] =
-    new Blueprint[TranslationAPI] {
-      import Translation.Commands._
+  private[translation] def apply(): Translation = new Translation()
 
-      override val extractID: ExtractEntityId = {
-        case msg: CreateTranslation => (s"${msg.projectID.value}/${msg.keyID.value}/${msg.locale}", msg)
-        case msg: GetTranslation => (s"${msg.projectID.value}/${msg.keyID.value}/${msg.locale}", msg)
-      }
+  object Blueprint extends Blueprint
 
-      override val name: String = "Translation"
+  object Commands extends Commands
 
-      override val props: Props = Props(new Translation())
-
-      override def region(ref: ActorRef): Shard[TranslationAPI] =
-        new Shard[TranslationAPI] {
-          override val api: TranslationAPI = new TranslationAPIImpl(ref, 10.seconds)
-        }
-    }
-
-  object Commands {
-    final case class CreateTranslation(projectID: ProjectID, keyID: KeyID, locale: String, value: String) extends Command
-    final case class GetTranslation(projectID: ProjectID, keyID: KeyID, locale: String) extends Command
-  }
-
-  object Events {
-    final case class TranslationCreated(projectID: ProjectID, keyID: KeyID, locale: String, value: String) extends Event
-  }
+  object Events extends Events
 }

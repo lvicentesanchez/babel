@@ -18,9 +18,9 @@ object Babel extends App {
 
   val system = ActorSystem("RosettaSystem", config)
   val sharding = Cluster(system, 100)
-  val key = sharding.of(Key.blueprint)
-  val project = sharding.of(Project.blueprint)
-  val translation = sharding.of(Translation.blueprint)
+  val key = sharding.of(Key.Blueprint)
+  val project = sharding.of(Project.Blueprint)
+  val translation = sharding.of(Translation.Blueprint)
   val babelAPI = new BabelAPIImpl(key.api, project.api, translation.api)
 
   val f0 =

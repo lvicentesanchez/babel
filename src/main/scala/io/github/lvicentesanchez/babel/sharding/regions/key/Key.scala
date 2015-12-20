@@ -4,11 +4,8 @@ import java.net.URLDecoder
 
 import akka.actor._
 import akka.cluster.sharding.ShardRegion
-import akka.cluster.sharding.ShardRegion.ExtractEntityId
 import akka.persistence.PersistentActor
 import io.github.lvicentesanchez.babel.data.{ KeyID, ProjectID }
-import io.github.lvicentesanchez.babel.sharding._
-import io.github.lvicentesanchez.babel.sharding.cluster.{ Blueprint, Shard }
 
 import scala.concurrent.duration._
 import scala.io.Codec
@@ -67,36 +64,11 @@ final class Key private[key] () extends Actor with PersistentActor {
 }
 
 object Key {
-  val blueprint: Blueprint[KeyAPI] =
-    new Blueprint[KeyAPI] {
-      import Key.Commands._
+  private[key] def apply(): Key = new Key()
 
-      override val extractID: ExtractEntityId = {
-        case msg: AddLocale => (s"${msg.projectID.value}/${msg.keyID.value}", msg)
-        case msg: CreateKey => (s"${msg.projectID.value}/${msg.keyID.value}", msg)
-        case msg: KeyExists => (s"${msg.projectID.value}/${msg.keyID.value}", msg)
-        case msg: LocaleExists => (s"${msg.projectID.value}/${msg.keyID.value}", msg)
-      }
+  object Blueprint extends Blueprint
 
-      override val name: String = "Key"
+  object Commands extends Commands
 
-      override val props: Props = Props(new Key())
-
-      override def region(ref: ActorRef): Shard[KeyAPI] =
-        new Shard[KeyAPI] {
-          override val api: KeyAPI = new KeyAPIImpl(ref, 10.seconds)
-        }
-    }
-
-  object Commands {
-    final case class AddLocale(projectID: ProjectID, keyID: KeyID, locale: String) extends Command
-    final case class CreateKey(projectID: ProjectID, keyID: KeyID) extends Command
-    final case class KeyExists(projectID: ProjectID, keyID: KeyID) extends Command
-    final case class LocaleExists(projectID: ProjectID, keyID: KeyID, locale: String) extends Command
-  }
-
-  object Events {
-    final case class KeyCreated(projectID: ProjectID, keyID: KeyID) extends Event
-    final case class LocaleAdded(projectID: ProjectID, keyID: KeyID, locale: String) extends Event
-  }
+  object Events extends Events
 }

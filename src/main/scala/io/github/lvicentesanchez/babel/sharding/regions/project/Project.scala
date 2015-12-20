@@ -4,11 +4,8 @@ import java.net.URLDecoder
 
 import akka.actor._
 import akka.cluster.sharding.ShardRegion
-import akka.cluster.sharding.ShardRegion.ExtractEntityId
 import akka.persistence.PersistentActor
 import io.github.lvicentesanchez.babel.data.ProjectID
-import io.github.lvicentesanchez.babel.sharding._
-import io.github.lvicentesanchez.babel.sharding.cluster.{ Blueprint, Shard }
 
 import scala.concurrent.duration._
 import scala.io.Codec
@@ -51,31 +48,11 @@ final class Project private[project] () extends Actor with PersistentActor {
 }
 
 object Project {
-  val blueprint: Blueprint[ProjectAPI] =
-    new Blueprint[ProjectAPI] {
-      import Project.Commands._
+  private[project] def apply(): Project = new Project()
 
-      override val extractID: ExtractEntityId = {
-        case msg: CreateProject => (msg.projectID.value, msg)
-        case msg: ProjectExists => (msg.projectID.value, msg)
-      }
+  object Blueprint extends Blueprint
 
-      override val name: String = "Project"
+  object Commands extends Commands
 
-      override val props: Props = Props(new Project())
-
-      override def region(ref: ActorRef): Shard[ProjectAPI] =
-        new Shard[ProjectAPI] {
-          override val api: ProjectAPI = new ProjectAPIImpl(ref, 10.seconds)
-        }
-    }
-
-  object Commands {
-    final case class CreateProject(projectID: ProjectID) extends Command
-    final case class ProjectExists(projectID: ProjectID) extends Command
-  }
-
-  object Events {
-    final case class ProjectCreated(projectID: ProjectID) extends Event
-  }
+  object Events extends Events
 }
